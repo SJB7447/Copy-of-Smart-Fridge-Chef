@@ -1,0 +1,8 @@
+{
+  "name": "Copy of Smart Fridge Chef",
+  "description": "An AI-powered recipe generator that suggests meals based on your refrigerator ingredients and the time of day.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
