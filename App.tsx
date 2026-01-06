@@ -1,12 +1,15 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MealTime, Recipe } from './types';
 import IngredientInput from './components/IngredientInput';
 import MealTimeSelector from './components/MealTimeSelector';
 import RecipeList from './components/RecipeList';
 import RecipeDetailModal from './components/RecipeDetailModal';
 import ImageCapture from './components/ImageCapture';
+import SavedRecipes from './components/SavedRecipes';
 import { generateRecipes, identifyIngredientsFromImage, generateRecipeImage } from './services/geminiService';
+
+const SAVED_RECIPES_KEY = 'smart_fridge_saved_recipes';
 
 const App: React.FC = () => {
   const [ingredients, setIngredients] = useState<string[]>([]);
@@ -16,169 +19,146 @@ const App: React.FC = () => {
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
-  const [loadingMessage, setLoadingMessage] = useState("레시피 생성 중...");
+  const [loadingMessage, setLoadingMessage] = useState("");
+  const [savedRecipes, setSavedRecipes] = useState<Recipe[]>([]);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
 
-  const handleAddIngredient = (item: string) => {
-    if (!ingredients.includes(item)) {
-      setIngredients([...ingredients, item]);
-    }
-  };
-
-  const handleBatchAddIngredients = (newIngredients: string[]) => {
-    const uniqueNewOnes = newIngredients.filter(item => !ingredients.includes(item));
-    if (uniqueNewOnes.length > 0) {
-      setIngredients(prev => [...prev, ...uniqueNewOnes]);
-    }
-  };
-
-  const handleRemoveIngredient = (index: number) => {
-    setIngredients(ingredients.filter((_, i) => i !== index));
-  };
+  useEffect(() => {
+    const stored = localStorage.getItem(SAVED_RECIPES_KEY);
+    if (stored) setSavedRecipes(JSON.parse(stored));
+  }, []);
 
   const handleSuggest = async () => {
-    if (ingredients.length === 0) {
-      alert("냉장고 재료를 하나 이상 입력해주세요!");
-      return;
-    }
-
+    if (ingredients.length === 0) return alert("재료를 선택해 주세요.");
     setLoading(true);
-    setLoadingMessage("AI가 맛있는 레시피를 구상하고 있습니다...");
+    setLoadingMessage("셰프가 식재료의 조화를 고민하고 있습니다...");
     setError(null);
     setRecipes([]);
 
     try {
-      // Step 1: Generate text recipes
       const textRecipes = await generateRecipes(ingredients, mealTime);
-      setRecipes(textRecipes); // Show text early if possible or wait
-
-      // Step 2: Generate images for each recipe
-      setLoadingMessage("요리 완성 사진을 생성하고 있습니다...");
-      const recipesWithImages = await Promise.all(
-        textRecipes.map(async (recipe) => {
-          const imageUrl = await generateRecipeImage(recipe.recipeName, recipe.description);
-          return { ...recipe, imageUrl };
-        })
-      );
-      
-      setRecipes(recipesWithImages);
+      setRecipes(textRecipes);
+      setLoadingMessage("요리의 완성된 모습을 캔버스에 담고 있습니다...");
+      const withImages = await Promise.all(textRecipes.map(async r => ({
+        ...r, imageUrl: await generateRecipeImage(r.recipeName, r.description)
+      })));
+      setRecipes(withImages);
     } catch (err: any) {
-      setError(err.message || "알 수 없는 오류가 발생했습니다.");
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleSaveRecipe = (recipe: Recipe) => {
+    if (savedRecipes.some(r => r.recipeName === recipe.recipeName)) return;
+    const newList = [recipe, ...savedRecipes];
+    setSavedRecipes(newList);
+    localStorage.setItem(SAVED_RECIPES_KEY, JSON.stringify(newList));
+  };
+
+  const handleDeleteSaved = (name: string) => {
+    const newList = savedRecipes.filter(r => r.recipeName !== name);
+    setSavedRecipes(newList);
+    localStorage.setItem(SAVED_RECIPES_KEY, JSON.stringify(newList));
+  };
+
+  const handleIngredientsFound = (newIngs: string[], imageUrl: string) => {
+    setIngredients(prev => [...new Set([...prev, ...newIngs])]);
+    setCapturedImage(imageUrl);
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 pb-20">
+    <div className="min-h-screen">
       {/* Scanning Overlay */}
       {scanning && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-md flex flex-col items-center justify-center text-white">
-          <div className="relative w-32 h-32 mb-8">
-            <div className="absolute inset-0 border-4 border-orange-500 rounded-2xl animate-pulse"></div>
-            <div className="absolute top-0 left-0 right-0 h-1 bg-orange-400 animate-[bounce_2s_infinite] shadow-[0_0_15px_rgba(251,146,60,0.8)]"></div>
-            <div className="flex items-center justify-center h-full">
-              <i className="fas fa-search text-5xl text-orange-400"></i>
-            </div>
+        <div className="fixed inset-0 z-[100] bg-[#1a1a1a]/90 backdrop-blur-sm flex flex-col items-center justify-center text-white">
+          <div className="w-24 h-24 border-2 border-white/20 rounded-full flex items-center justify-center animate-pulse">
+            <i className="fas fa-hat-chef text-4xl"></i>
           </div>
-          <h2 className="text-2xl font-black mb-2">냉장고 스캔 중...</h2>
-          <p className="text-slate-300 font-medium">AI가 식재료를 파악하고 있습니다.</p>
+          <p className="mt-6 text-xl font-serif-kr">셰프가 냉장고를 살피고 있습니다...</p>
         </div>
       )}
 
-      {/* Header */}
-      <header className="bg-white border-b border-slate-100 sticky top-0 z-30 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center text-white">
-              <i className="fas fa-utensils text-lg"></i>
-            </div>
-            <h1 className="text-xl font-black text-slate-800 tracking-tight">스마트 냉장고 셰프</h1>
-          </div>
-          <div className="hidden sm:block text-slate-400 text-sm font-medium">실시간 AI 요리 사진 생성</div>
+      {/* Hero Section */}
+      <header className="pt-16 pb-12 px-4 text-center">
+        <div className="inline-block px-4 py-1 bg-[#4a5d4e] text-white rounded-full text-xs font-bold mb-4 tracking-widest uppercase">
+          Gourmet Secret Guide
         </div>
+        <h1 className="text-5xl font-serif-kr font-black text-[#2c3e50] mb-4">Gourmet Chef's Atelier</h1>
+        <p className="text-[#7f8c8d] max-w-xl mx-auto italic">"평범한 냉장고 속 재료들이 셰프의 손길을 만나 마법 같은 요리로 탄생합니다."</p>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 pt-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1">
-             <ImageCapture 
-                onIngredientsFound={handleBatchAddIngredients} 
+      <main className="max-w-6xl mx-auto px-4">
+        {/* Workspace Card */}
+        <div className="bg-white rounded-[2rem] shadow-xl shadow-[#e0dcd0]/50 p-8 mb-12 border border-[#f0eee4]">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+            <div className="lg:col-span-4 h-full min-h-[300px]">
+              <ImageCapture 
+                onIngredientsFound={handleIngredientsFound} 
                 onScanningStateChange={setScanning}
                 identifyIngredientsFromImage={identifyIngredientsFromImage}
+                currentImage={capturedImage}
               />
-          </div>
-          <div className="lg:col-span-2 flex flex-col gap-6">
-            <IngredientInput
-              ingredients={ingredients}
-              onAdd={handleAddIngredient}
-              onRemove={handleRemoveIngredient}
-            />
-            <MealTimeSelector
-              selected={mealTime}
-              onChange={setMealTime}
-            />
-          </div>
-        </div>
-
-        <div className="mt-8 flex justify-center">
-          <button
-            onClick={handleSuggest}
-            disabled={loading || scanning}
-            className={`
-              relative overflow-hidden group px-12 py-5 rounded-2xl font-bold text-white text-lg shadow-xl transition-all duration-300
-              ${loading || scanning ? 'bg-slate-400 cursor-not-allowed' : 'bg-orange-500 hover:bg-orange-600 hover:scale-105 active:scale-95 shadow-orange-200'}
-            `}
-          >
-            {loading ? (
-              <div className="flex items-center gap-3">
-                <i className="fas fa-spinner fa-spin"></i>
-                {loadingMessage}
-              </div>
-            ) : (
-              <div className="flex items-center gap-3">
-                <i className="fas fa-magic"></i>
-                AI 맞춤 레시피 및 사진 생성하기
-              </div>
-            )}
-          </button>
-        </div>
-
-        {error && (
-          <div className="mt-8 p-4 bg-red-50 border border-red-100 text-red-600 rounded-xl text-center font-medium">
-            <i className="fas fa-exclamation-circle mr-2"></i>
-            {error}
-          </div>
-        )}
-
-        {recipes.length > 0 && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h2 className="text-2xl font-black text-slate-800 mt-12 mb-2 flex items-center gap-3">
-              <span className="w-2 h-8 bg-orange-500 rounded-full"></span>
-              찾아낸 최고의 레시피
-            </h2>
-            <p className="text-slate-500 mb-6 font-medium">냉장고 속 재료로 만든 실제 요리 완성 예상 모습입니다.</p>
-            <RecipeList recipes={recipes} onSelect={setSelectedRecipe} />
-          </div>
-        )}
-
-        {!loading && !scanning && recipes.length === 0 && !error && (
-          <div className="mt-20 text-center py-12 px-4">
-            <div className="bg-slate-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-300">
-              <i className="fas fa-camera-retro text-4xl"></i>
             </div>
-            <h3 className="text-xl font-bold text-slate-600 mb-2">냉장고 사진을 찍어보세요!</h3>
-            <p className="text-slate-400 max-w-sm mx-auto">카메라로 냉장고 안을 촬영하면 AI가 자동으로 재료를 분석하고 완성 요리 사진까지 보여드립니다.</p>
+            <div className="lg:col-span-8 space-y-8">
+              <IngredientInput
+                ingredients={ingredients}
+                onAdd={(v) => setIngredients([...ingredients, v])}
+                onRemove={(i) => setIngredients(ingredients.filter((_, idx) => idx !== i))}
+              />
+              <MealTimeSelector
+                selected={mealTime}
+                onChange={setMealTime}
+              />
+            </div>
           </div>
+
+          <div className="mt-12 flex justify-center">
+            <button
+              onClick={handleSuggest}
+              disabled={loading}
+              className={`
+                group relative px-16 py-5 rounded-full font-serif-kr text-xl font-bold text-white transition-all duration-500
+                ${loading ? 'bg-[#95a5a6] cursor-not-allowed' : 'bg-[#4a5d4e] hover:bg-[#3a4a3e] hover:scale-105 active:scale-95 shadow-lg shadow-[#4a5d4e]/30'}
+              `}
+            >
+              {loading ? (
+                <span className="flex items-center gap-3"><i className="fas fa-circle-notch fa-spin"></i> {loadingMessage}</span>
+              ) : (
+                <span className="flex items-center gap-3"><i className="fas fa-feather-pointed"></i> 셰프의 제안 받기</span>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Results Section */}
+        {recipes.length > 0 && (
+          <section className="mb-20 animate-in fade-in duration-1000">
+            <div className="text-center mb-10">
+              <h2 className="text-3xl font-serif-kr font-bold text-[#2c3e50] mb-2">오늘의 특선 레시피</h2>
+              <div className="w-20 h-1 bg-[#4a5d4e] mx-auto rounded-full"></div>
+            </div>
+            <RecipeList recipes={recipes} onSelect={setSelectedRecipe} />
+          </section>
         )}
+
+        <SavedRecipes 
+          recipes={savedRecipes} 
+          onSelect={setSelectedRecipe} 
+          onDelete={handleDeleteSaved} 
+        />
       </main>
 
       <RecipeDetailModal
         recipe={selectedRecipe}
         onClose={() => setSelectedRecipe(null)}
+        onSave={handleSaveRecipe}
+        isSaved={selectedRecipe ? savedRecipes.some(r => r.recipeName === selectedRecipe.recipeName) : false}
       />
 
-      <footer className="mt-20 border-t border-slate-100 py-10 text-center">
-        <p className="text-slate-400 text-sm">© 2024 Smart Fridge Chef AI. Powered by Gemini Multimodal & Image Generation.</p>
+      <footer className="py-20 text-center border-t border-[#e0dcd0]">
+        <p className="text-[#95a5a6] text-sm font-serif-kr">Master Chef's Atelier © 2024</p>
       </footer>
     </div>
   );

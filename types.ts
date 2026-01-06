@@ -12,9 +12,11 @@ export interface RecipeIngredient {
 
 export interface Recipe {
   recipeName: string;
+  cuisineType: string; // 한식, 일식, 중식, 양식 등
   description: string;
   ingredients: RecipeIngredient[];
   steps: string[];
+  chefTips?: string[];
   cookingTime: string;
   calories?: string;
   imageUrl?: string;

@@ -9,30 +9,30 @@ interface Props {
 
 const MealTimeSelector: React.FC<Props> = ({ selected, onChange }) => {
   const options = [
-    { value: MealTime.BREAKFAST, icon: 'fa-sun', label: '아침', color: 'bg-yellow-50 text-yellow-600 border-yellow-200' },
-    { value: MealTime.LUNCH, icon: 'fa-cloud-sun', label: '점심', color: 'bg-orange-50 text-orange-600 border-orange-200' },
-    { value: MealTime.DINNER, icon: 'fa-moon', label: '저녁', color: 'bg-indigo-50 text-indigo-600 border-indigo-200' },
+    { value: MealTime.BREAKFAST, icon: 'fa-sun', label: 'Sunrise', sub: '아침', active: 'bg-[#fef9e7] border-[#f9e79f] text-[#d4ac0d]' },
+    { value: MealTime.LUNCH, icon: 'fa-cloud-sun', label: 'Midday', sub: '점심', active: 'bg-[#f4f7f5] border-[#4a5d4e] text-[#4a5d4e]' },
+    { value: MealTime.DINNER, icon: 'fa-moon', label: 'Twilight', sub: '저녁', active: 'bg-[#f4f6f7] border-[#2c3e50] text-[#2c3e50]' },
   ];
 
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-      <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-        <i className="fas fa-clock text-blue-500"></i>
-        식사 시간 선택
-      </h2>
-      <div className="grid grid-cols-3 gap-3">
+    <div className="space-y-4">
+      <h3 className="text-xs font-bold text-[#bdc3c7] uppercase tracking-[0.2em] mb-4">Select Timing</h3>
+      <div className="grid grid-cols-3 gap-4">
         {options.map((opt) => (
           <button
             key={opt.value}
             onClick={() => onChange(opt.value)}
-            className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 ${
+            className={`flex flex-col items-center gap-3 p-5 rounded-3xl border-2 transition-all duration-500 ${
               selected === opt.value
-                ? `${opt.color.replace('border-', 'border-')} ring-4 ring-offset-2 ring-opacity-20`
-                : 'bg-white border-slate-100 text-slate-400 hover:border-slate-300 hover:bg-slate-50'
+                ? `${opt.active} scale-105 shadow-lg shadow-black/5`
+                : 'bg-white border-[#f0eee4] text-[#bdc3c7] hover:border-[#d5d2c1] hover:bg-[#fcfbf7]'
             }`}
           >
-            <i className={`fas ${opt.icon} text-2xl`}></i>
-            <span className="font-semibold">{opt.label}</span>
+            <i className={`fas ${opt.icon} text-xl`}></i>
+            <div className="text-center">
+              <div className="font-serif-kr font-black text-sm">{opt.label}</div>
+              <div className="text-[10px] opacity-60 font-bold">{opt.sub}</div>
+            </div>
           </button>
         ))}
       </div>

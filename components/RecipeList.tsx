@@ -9,41 +9,39 @@ interface Props {
 
 const RecipeList: React.FC<Props> = ({ recipes, onSelect }) => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
       {recipes.map((recipe, index) => (
         <div
           key={index}
           onClick={() => onSelect(recipe)}
-          className="group bg-white rounded-2xl shadow-md border border-slate-100 overflow-hidden cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+          className="group cursor-pointer"
         >
-          <div className="h-48 bg-slate-200 relative overflow-hidden">
+          <div className="relative aspect-[3/4] rounded-[2rem] overflow-hidden mb-4 shadow-xl shadow-[#e0dcd0]/50 transition-transform duration-500 group-hover:-translate-y-2">
             {recipe.imageUrl ? (
-              <img
-                src={recipe.imageUrl}
-                alt={recipe.recipeName}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              />
+              <img src={recipe.imageUrl} alt={recipe.recipeName} className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400">
-                <i className="fas fa-circle-notch fa-spin text-2xl mb-2"></i>
-                <span className="text-xs font-semibold">사진 생성 중...</span>
+              <div className="w-full h-full bg-[#f0eee4] flex flex-col items-center justify-center text-[#bdc3c7]">
+                <i className="fas fa-hat-chef text-4xl mb-3 animate-bounce"></i>
+                <span className="text-xs font-bold tracking-widest uppercase">Preparing...</span>
               </div>
             )}
-            <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-slate-700 shadow-sm">
-              <i className="far fa-clock mr-1 text-orange-500"></i>
-              {recipe.cookingTime}
+            {/* Cuisine Type Badge */}
+            <div className="absolute top-6 left-6 flex flex-col gap-2">
+              <div className="bg-white/90 backdrop-blur px-3 py-1 rounded-full text-[10px] font-bold text-[#4a5d4e] shadow-sm uppercase tracking-tighter">
+                Chef's Pick
+              </div>
+              <div className="bg-[#2c3e50]/80 backdrop-blur px-3 py-1 rounded-full text-[9px] font-bold text-white shadow-sm tracking-wide">
+                {recipe.cuisineType}
+              </div>
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-8">
+              <span className="text-white font-serif-kr text-lg">레시피 보기 <i className="fas fa-arrow-right ml-2 text-sm"></i></span>
             </div>
           </div>
-          <div className="p-5">
-            <h3 className="text-xl font-bold text-slate-800 mb-2 line-clamp-1">{recipe.recipeName}</h3>
-            <p className="text-slate-500 text-sm line-clamp-2 leading-relaxed mb-4">
-              {recipe.description}
-            </p>
-            <div className="flex items-center justify-between text-xs font-semibold text-orange-600">
-              <span className="bg-orange-50 px-2 py-1 rounded">재료 {recipe.ingredients.length}개</span>
-              <span className="text-slate-400 group-hover:text-orange-500 transition-colors">자세히 보기 <i className="fas fa-chevron-right ml-1"></i></span>
-            </div>
-          </div>
+          <h3 className="text-xl font-serif-kr font-bold text-[#2c3e50] group-hover:text-[#4a5d4e] transition-colors mb-1 truncate px-2">
+            {recipe.recipeName}
+          </h3>
+          <p className="text-[#95a5a6] text-sm line-clamp-2 px-2 italic">"{recipe.description}"</p>
         </div>
       ))}
     </div>
